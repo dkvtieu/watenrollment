@@ -4,11 +4,11 @@ import urllib2
 import smtplib
 import winsound
 
-
-subject = raw_input('Subject? ')
-course_number = raw_input('Course Number? ')
-section_input = raw_input('Section? ')
-section_number = int(section_input) + 1
+term = raw_input('Term? (e.g. 1161 is Winter 2016) ')
+subject = raw_input('Subject? (e.g. MATH) ')
+catalog = raw_input('Course Number? (e.g. 240) ')
+section_type = raw_input('Are you looking for a LEC or TUT? (e.g. LEC) ')
+section_number = raw_input('Section? (e.g. 001) ')
 ask_email = raw_input('Would you like to recieve email notifications when a spot opens up? [y/n] ')
 
 
@@ -19,10 +19,10 @@ else:
 refresh_rate = raw_input('Refresh Rate? ')
 refresh_rate = int(refresh_rate)
 
+url = 'http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?level=under&sess=%s&subject=%s&cournum=%s' % (term, subject.upper(), catalog)
 
 """
 # EMAIL HANDLING #
-
 msg='hello'
 server = smtplib.SMTP('smtp.gmail.com', 587)
 server.ehlo()
@@ -32,33 +32,56 @@ server.sendmail('from_email', 'your_email', msg)
 server.quit()
 """
 
-exit = True
+#column index for the table of information
+comp_sec = 2
+enrl_cap = 6
+enrl_tot = 7
+instructor = 12
 
-while exit:
-	url = 'http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?level=under&sess=1161&subject=%s&cournum=%s' % (subject.upper(), course_number.upper())
+
+def get_page():
 	request = urllib2.Request(url)
 	page = urllib2.urlopen(request)
-
 	html_parser = etree.HTMLParser()
 	tree = etree.parse(page, html_parser)
+	return tree
 
-	enrollment_capacity = tree.xpath('//table[@border="2"]//table/tr[%s]/td[7]/text()' % section_number)
-	enrollment_total = tree.xpath('//table[@border="2"]//table/tr[%s]/td[8]/text()' % section_number)
+number_of_rows = get_page().xpath('//table[@border="2"]//table/tr')
 
-	enrollment_capacity = int(seats_taken[0])
-	enrollment_total = int(seats_total[0])
+def get_row_info(row_index):
+	display_row = get_page().xpath('//table[@border="2"]//table/tr[%d]//td/text()' % row_index)
+	return display_row
 
-	if enrollment_total > enrollment_capacity: 
-		print 'All %s seats are unavailable for Section %s of %s %s' % (seats_total, int(section_input), subject.upper(), course_number)
-	else:
-		print "SEATS ARE AVAILABLE"
-		seats_available = seats_total - seats_taken
-		# msg = "There are now %s seats available for Section %s of %s %s" % (seats_available, int(section_input), subject, course_number)
-		while True:
-			winsound.Beep(500,500)
-		exit = False
+#creates a list of lists where each element is a valid row in the data table
+def row_list():
+	list = []
+	for i in range(2, len(number_of_rows)): #begins at 2 so that it disregards the first two useless rows
+		list.append(get_row_info(i))
+	return list
 
-	time.sleep(refresh_rate)
+#loop for finding correct row to parse 
+def find_row():
+	row_list_info = row_list()
+	for row in row_list_info:
+		section = row[1]
+		if section[:3] == section_type.upper() and int(section[4:7]) == int(section_number):
+			break
+	return row
 
+def main():
+	while True:
+		correct_row = find_row()
+		enrollment_capacity = int(correct_row[enrl_cap])
+		enrollment_total = int(correct_row[enrl_tot])
+		if enrollment_total >= enrollment_capacity: 
+			print 'All %s seats are unavailable for %s %s of %s %s' % (enrollment_capacity, section_type.upper(), section_number, subject.upper(), catalog)
+			time.sleep(refresh_rate)
+		else:
+			seats_available = enrollment_capacity - enrollment_total
+			print "There are now %s seat(s) available for %s %s of %s %s" % (seats_available, section_type.upper(), section_number, subject.upper(), catalog)
+			time.sleep(15) #makes sure the message stays visible to the user for a brief period of time 
+			break
 
-
+if __name__ == "__main__":
+	# execute only if run as a script
+	main()
