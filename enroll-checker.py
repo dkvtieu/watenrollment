@@ -74,11 +74,11 @@ def main():
 		enrollment_capacity = int(correct_row[enrl_cap])
 		enrollment_total = int(correct_row[enrl_tot])
 		if enrollment_total >= enrollment_capacity: 
-			print 'All %s seats are unavailable for %s %s of %s %s' % (enrollment_capacity, section_type.upper(), section_number, subject.upper(), catalog)
+			print 'All %d seats are unavailable for %s %03d of %s %s' % (enrollment_capacity, section_type.upper(), int(section_number), subject.upper(), catalog)
 			time.sleep(refresh_rate)
 		else:
 			seats_available = enrollment_capacity - enrollment_total
-			print "There are now %s seat(s) available for %s %s of %s %s" % (seats_available, section_type.upper(), section_number, subject.upper(), catalog)
+			print "There are now %d seat(s) available for %s %03d of %s %s" % (seats_available, section_type.upper(), int(section_number), subject.upper(), catalog)
 			time.sleep(15) #makes sure the message stays visible to the user for a brief period of time 
 			break
 
